@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#f59e0b"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="description" content="Sunrise Realty — Team CRM & Lead Tracker"/>
+<title>Sunrise Realty</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="icon" href="icon-192.png"/>
+<link rel="stylesheet" href="css/style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>body{font-family:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}</style>
+</head>
+<body aria-live="polite">
+
+<!-- TOP PROGRESS BAR -->
+<div id="top-progress" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"></div>
+
+<!-- GLOBAL LOADER (app shell) -->
+<div id="global-loader" role="status" aria-label="Application loading" aria-busy="true">
+  <div class="brand" style="font-size:clamp(1.8rem,6vw,2.4rem);text-transform:uppercase;letter-spacing:-.02em">SUNRISE<span style="color:var(--gold)">REALTY</span></div>
+  <div class="loader-ring" aria-hidden="true"></div>
+  <div class="loader-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+</div>
+
+<!-- PULL-TO-REFRESH -->
+<div id="ptr" aria-hidden="true">
+  <i data-lucide="refresh-cw" style="width:14px;height:14px;animation:spin .6s linear infinite"></i>Syncing…
+</div>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="login-scr" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;padding:20px;background-image:radial-gradient(ellipse 80% 60% at 30% 25%,rgba(245,158,11,.09) 0,transparent 65%)">
+  <div class="card scale-in" style="padding:28px 22px;width:100%;max-width:390px;border-color:rgba(245,158,11,.2)">
+    <div style="text-align:center;margin-bottom:24px">
+      <div class="brand" style="font-size:clamp(1.6rem,7vw,2.2rem);text-transform:uppercase;letter-spacing:-.02em">SUNRISE<span style="color:var(--gold)">REALTY</span></div>
+      <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.14em;margin-top:6px">Helping You Find Your Dream Home</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div><label class="lbl">Username</label><input id="un" type="text" class="inp" placeholder="Enter username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div><label class="lbl">Password</label><input id="pw" type="password" class="inp" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <button id="login-btn" class="btn btn-gold" onclick="doLogin()" style="margin-top:4px">Access Dashboard</button>
+      <button class="btn btn-ghost" onclick="showScreen('signup')" style="min-height:40px;font-size:11px">New User? Create Account</button>
+      <div id="login-err"  style="display:none;color:#f87171;font-size:10px;font-weight:800;text-transform:uppercase;text-align:center">⚠ Invalid credentials. Try again.</div>
+      <div id="login-lock" style="display:none;color:var(--gold);font-size:10px;font-weight:800;text-transform:uppercase;text-align:center">🔒 Account locked. Contact admin.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SIGNUP ══════════ -->
+<div id="signup-scr" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;padding:20px;overflow-y:auto;background-image:radial-gradient(ellipse 80% 60% at 70% 75%,rgba(16,185,129,.07) 0,transparent 65%)">
+  <div class="card scale-in" style="padding:28px 22px;width:100%;max-width:390px;border-color:rgba(16,185,129,.2)">
+    <div style="text-align:center;margin-bottom:20px">
+      <div class="brand" style="font-size:clamp(1.4rem,6vw,1.8rem);text-transform:uppercase;letter-spacing:-.02em">Create <span style="color:var(--grn)">Account</span></div>
+      <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.14em;margin-top:5px">Sunrise Realty Team Portal</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div class="g2">
+        <div><label class="lbl">Username *</label><input id="su-un" type="text" class="inp" placeholder="unique name"/></div>
+        <div><label class="lbl">Password *</label><input id="su-pw" type="password" class="inp" placeholder="min 4 chars"/></div>
+      </div>
+      <div><label class="lbl">Full Name *</label><input id="su-fn" type="text" class="inp" placeholder="Your full name"/></div>
+      <div><label class="lbl">Designation *</label>
+        <select id="su-desig" class="inp">
+          <option value="">Select…</option>
+          <option value="Sales">Sales</option>
+          <option value="Telecaller">Telecaller</option>
+          <option value="Digital">Digital</option>
+        </select>
+      </div>
+      <div class="g2">
+        <div><label class="lbl">Phone</label><input id="su-ph" type="tel" class="inp" placeholder="10-digit" maxlength="10" inputmode="numeric"/></div>
+        <div><label class="lbl">Email</label><input id="su-em" type="email" class="inp" placeholder="your@email.com"/></div>
+      </div>
+      <div id="su-err" style="display:none;color:#f87171;font-size:10px;font-weight:800;text-transform:uppercase;text-align:center;padding:8px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.2)"></div>
+      <button id="su-btn" class="btn btn-grn" onclick="doSignup()"><i data-lucide="user-plus" style="width:15px;height:15px"></i>Create Account</button>
+      <button class="btn btn-ghost" onclick="showScreen('login')" style="min-height:40px;font-size:11px">← Back to Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app" style="display:none">
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="brand-wrap">
+    <div>
+      <div class="brand brand-txt">SUNRISE<span style="color:var(--gold)">REALTY</span></div>
+      <div class="sync-row"><span class="live-dot"></span><span id="sync-txt">System Live</span></div>
+    </div>
+  </div>
+  <div class="nav-actions">
+    <button id="refresh-btn" class="nav-icon-btn gold" onclick="manualRefresh()" title="Refresh" aria-label="Refresh data">
+      <i data-lucide="refresh-cw"></i>
+    </button>
+    <button id="profile-btn" onclick="toggleDrawer()" aria-label="Profile menu">
+      <div class="profile-avatar" id="profile-av">U</div>
+    </button>
+    <button id="menu-btn" class="nav-icon-btn" onclick="toggleMenu()" title="Menu" aria-label="Open navigation menu">
+      <i data-lucide="menu"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- SIDEBAR (desktop) -->
+<nav id="sidebar" aria-label="Main navigation">
+  <div class="nav-grp-lbl">Main</div>
+  <button class="nav-item on" id="sn-dash"     onclick="goSec('dash')"><i data-lucide="layout-dashboard"></i>Dashboard</button>
+  <button class="nav-item"    id="sn-daily"    onclick="goSec('daily')"><i data-lucide="clipboard-pen"></i>Daily Report</button>
+  <button class="nav-item"    id="sn-lead"     onclick="goSec('lead')"><i data-lucide="star"></i>Add Lead</button>
+  <div class="nav-grp-lbl admin-el">Admin</div>
+  <button class="nav-item admin-el" id="sn-users"    onclick="goSec('users')"><i data-lucide="users"></i>User Mgmt</button>
+  <button class="nav-item admin-el" id="sn-teams"    onclick="goSec('teams')"><i data-lucide="layers"></i>Teams</button>
+  <button class="nav-item admin-el" id="sn-audit"    onclick="goSec('audit')"><i data-lucide="shield-check"></i>Audit Log</button>
+  <button class="nav-item admin-el" id="sn-backup"   onclick="goSec('backup')"><i data-lucide="database-backup"></i>Backup</button>
+  <button class="nav-item admin-el" id="sn-settings" onclick="goSec('settings')"><i data-lucide="settings-2"></i>Settings</button>
+</nav>
+
+<!-- BOTTOM TABS (mobile) -->
+<div id="tab-bar" role="tablist" aria-label="Main navigation">
+  <button class="tab on" id="tb-dash"  onclick="goSec('dash')" role="tab"><i data-lucide="layout-dashboard"></i><span>Home</span></button>
+  <button class="tab"    id="tb-daily" onclick="goSec('daily')" role="tab"><i data-lucide="clipboard-pen"></i><span>Daily</span></button>
+  <button class="tab"    id="tb-lead"  onclick="goSec('lead')" role="tab"><i data-lucide="star"></i><span>Lead</span></button>
+  <button class="tab"    id="tb-prof"  onclick="toggleDrawer()" role="tab"><i data-lucide="user-circle"></i><span>Profile</span></button>
+</div>
+
+<!-- MENU DRAWER -->
+<div id="menu-overlay" onclick="closeMenu()" aria-hidden="true"></div>
+<div id="menu-drawer" role="navigation" aria-label="App menu">
+  <div class="menu-hdr">
+    <div class="menu-hdr-title brand">SUNRISE<span style="color:var(--gold)">REALTY</span></div>
+    <button class="menu-close-btn" onclick="closeMenu()" aria-label="Close menu"><i data-lucide="x"></i></button>
+  </div>
+  <div class="menu-body">
+    <div class="menu-lbl">Navigate</div>
+    <button class="menu-item on" id="mn-dash"     onclick="goSec('dash')"><i data-lucide="layout-dashboard"></i>Dashboard</button>
+    <button class="menu-item"    id="mn-daily"    onclick="goSec('daily')"><i data-lucide="clipboard-pen"></i>Daily Report</button>
+    <button class="menu-item"    id="mn-lead"     onclick="goSec('lead')"><i data-lucide="star"></i>Add Lead</button>
+    <div class="menu-sep admin-el"></div>
+    <div class="menu-lbl admin-el">Admin</div>
+    <button class="menu-item admin-el" id="mn-users"    onclick="goSec('users')"><i data-lucide="users"></i>User Mgmt</button>
+    <button class="menu-item admin-el" id="mn-teams"    onclick="goSec('teams')"><i data-lucide="layers"></i>Teams</button>
+    <button class="menu-item admin-el" id="mn-audit"    onclick="goSec('audit')"><i data-lucide="shield-check"></i>Audit Log</button>
+    <button class="menu-item admin-el" id="mn-backup"   onclick="goSec('backup')"><i data-lucide="database-backup"></i>Backup</button>
+    <button class="menu-item admin-el" id="mn-settings" onclick="goSec('settings')"><i data-lucide="settings-2"></i>Settings</button>
+    <div class="menu-sep"></div>
+    <button class="menu-item danger" onclick="doLogout()"><i data-lucide="log-out"></i>Logout</button>
+  </div>
+</div>
+
+<!-- PROFILE DRAWER -->
+<div id="profile-drawer" role="complementary" aria-label="Profile">
+  <div class="drawer-inner">
+    <div style="display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div class="profile-avatar" id="drawer-av" style="width:44px;height:44px;font-size:16px">U</div>
+      <div>
+        <div id="drawer-name"  style="font-weight:900;color:#fff;font-size:14px"></div>
+        <div id="drawer-uid"   style="font-size:8px;color:var(--muted);font-weight:800;letter-spacing:.1em;margin-top:1px;font-family:monospace"></div>
+        <div id="drawer-role"  style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:800;letter-spacing:.07em;margin-top:1px"></div>
+        <div id="drawer-desig" style="font-size:9px;color:var(--gold);text-transform:uppercase;font-weight:800;letter-spacing:.07em;margin-top:1px"></div>
+      </div>
+    </div>
+    <div id="drawer-info" style="display:flex;flex-direction:column;gap:7px"></div>
+    <button class="btn btn-red" onclick="doLogout()" style="margin-top:4px"><i data-lucide="log-out" style="width:15px;height:15px"></i>Logout</button>
+  </div>
+</div>
+<div id="drawer-bg" onclick="closeDrawer()" style="display:none;position:fixed;inset:0;z-index:70" aria-hidden="true"></div>
+
+<!-- ══════════ MAIN ══════════ -->
+<main id="main">
+
+<!-- ── DASHBOARD ── -->
+<div id="sec-dash" class="sec on">
+  <!-- Filters row -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="pills" style="flex:1;min-width:0">
+        <button class="pill on" id="fp-today"     onclick="setF('today')">Today</button>
+        <button class="pill"    id="fp-yesterday" onclick="setF('yesterday')">Yesterday</button>
+        <button class="pill"    id="fp-week"      onclick="setF('week')">This Week</button>
+        <button class="pill"    id="fp-lastweek"  onclick="setF('lastweek')">Last Week</button>
+        <button class="pill"    id="fp-month"     onclick="setF('month')">Month</button>
+        <button class="pill"    id="fp-year"      onclick="setF('year')">Year</button>
+        <button class="pill"    id="fp-range-btn" onclick="toggleRng()">Range ＋</button>
+        <button class="pill"    id="fp-all"       onclick="setF('all')">All</button>
+      </div>
+      <div class="admin-el" style="display:flex;gap:5px;flex-shrink:0">
+        <button onclick="exportXLSX()" class="btn btn-blue btn-sm" title="Export Excel"><i data-lucide="file-spreadsheet" style="width:13px;height:13px"></i></button>
+        <button onclick="exportPDF()"  class="btn btn-ghost btn-sm" title="Export PDF"><i data-lucide="file-text" style="width:13px;height:13px"></i></button>
+      </div>
+    </div>
+    <div id="rng-box" class="card" style="display:none;padding:13px;border-color:rgba(245,158,11,.2)">
+      <div class="g2">
+        <div><label class="lbl">From</label><input type="date" id="d-from" class="inp" onchange="setF('range')"/></div>
+        <div><label class="lbl">To</label>  <input type="date" id="d-to"   class="inp" onchange="setF('range')"/></div>
+      </div>
+    </div>
+    <div id="sub-filters" style="display:none;flex-direction:column;gap:8px">
+      <div class="pills">
+        <button class="pill on" id="df-all"       onclick="setDF('all')">All Roles</button>
+        <button class="pill"    id="df-Sales"      onclick="setDF('Sales')">Sales</button>
+        <button class="pill"    id="df-Telecaller" onclick="setDF('Telecaller')">Telecaller</button>
+        <button class="pill"    id="df-Digital"    onclick="setDF('Digital')">Digital</button>
+      </div>
+      <div class="pills" id="team-pills"></div>
+    </div>
+  </div>
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi" style="border-left:3px solid var(--gold)">
+      <div class="lbl">📞 Calls</div><div class="kpi-val" id="s-calls">0</div>
+      <div style="font-size:9.5px;color:var(--muted)" id="s-conn">0 connected</div>
+    </div>
+    <div class="kpi" style="border-left:3px solid var(--blue)">
+      <div class="lbl">🏠 Visits</div><div class="kpi-val" id="s-visits">0</div>
+    </div>
+    <div class="kpi" style="border-left:3px solid var(--grn)">
+      <div class="lbl">📋 Bookings</div>
+      <div class="kpi-val" id="s-books" style="color:var(--grn)">0</div>
+      <div class="prog"><div class="prog-f" id="book-prog" style="width:0%"></div></div>
+      <div style="font-size:8.5px;color:var(--muted);margin-top:3px" id="book-tgt">of target</div>
+    </div>
+    <div class="kpi" style="background:var(--goldb);border-color:rgba(245,158,11,.18)">
+      <div class="lbl" style="color:var(--gold)">⭐ Positive Leads</div><div class="kpi-val" id="s-pos">0</div>
+    </div>
+  </div>
+  <!-- Search -->
+  <div class="srch"><i data-lucide="search"></i><input type="text" id="srch" class="inp" placeholder="Search agent or client…" oninput="renderDash()" aria-label="Search agents or clients"/></div>
+  <!-- Performance Table -->
+  <div id="perf-sec" style="display:none;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="row"><i data-lucide="trophy" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Team Performance — Ranked</span></div>
+      <div style="display:flex;gap:5px">
+        <button onclick="exportPerfXLSX()" class="btn btn-blue btn-sm" title="Export Ranking Excel"><i data-lucide="file-spreadsheet" style="width:12px;height:12px"></i><span style="font-size:9px">Export XLS</span></button>
+        <button onclick="exportPerfPDF()"  class="btn btn-ghost btn-sm" title="Export Ranking PDF"><i data-lucide="file-text" style="width:12px;height:12px"></i><span style="font-size:9px">Export PDF</span></button>
+      </div>
+    </div>
+    <div class="tbl-w card">
+      <table><thead><tr>
+        <th>#</th><th>Agent</th><th>Desig</th><th>Team</th>
+        <th class="c">Calls</th><th class="c">Conn</th><th class="c">Visits</th>
+        <th class="c">Books</th><th class="c">+ve</th><th class="c">F/Up</th>
+      </tr></thead><tbody id="perf-body"></tbody></table>
+    </div>
+  </div>
+  <!-- Chart -->
+  <div id="chart-sec" style="display:none;flex-direction:column;gap:10px">
+    <div class="row"><i data-lucide="bar-chart-2" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Performance Chart</span></div>
+    <div class="card" style="padding:14px"><canvas id="perf-chart" height="200" aria-label="Performance chart"></canvas></div>
+  </div>
+  <!-- Leads Feed -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="row"><i data-lucide="award" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Client Feed</span></div>
+    <div class="leads-grid" id="leads-wrap"></div>
+    <div id="no-leads" class="empty" style="display:none">No leads for this period</div>
+  </div>
+</div>
+
+<!-- ── DAILY REPORT ── -->
+<div id="sec-daily" class="sec">
+  <div class="row"><i data-lucide="clipboard-pen" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Daily Tracking Report</span></div>
+  <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:14px">
+    <div class="g2">
+      <div><label class="lbl">Your Full Name</label><input id="f-name" type="text" class="inp" placeholder="Full name"/></div>
+      <div><label class="lbl">Designation</label>
+        <select id="f-desig" class="inp" onchange="toggleDesig()">
+          <option value="">Select…</option><option value="Sales">Sales</option><option value="Telecaller">Telecaller</option><option value="Digital">Digital</option>
+        </select>
+      </div>
+    </div>
+    <div id="fld-sales" style="display:none;flex-direction:column;gap:12px">
+      <div class="g2">
+        <div><label class="lbl">Total Calls</label><input id="f-tc" type="number" class="inp" placeholder="0" min="0"/></div>
+        <div><label class="lbl">Connected</label>  <input id="f-cc" type="number" class="inp" placeholder="0" min="0"/></div>
+        <div><label class="lbl">Site Visits</label> <input id="f-vi" type="number" class="inp" placeholder="0" min="0"/></div>
+        <div><label class="lbl">Bookings</label>    <input id="f-bk" type="number" class="inp" placeholder="0" min="0"/></div>
+      </div>
+      <div><label class="lbl">Positive Clients (count)</label><input id="f-pc" type="number" class="inp" placeholder="0" min="0"/></div>
+    </div>
+    <div id="fld-dig" style="display:none;flex-direction:column;gap:12px">
+      <div><label class="lbl">Created Posts (type)</label><input id="f-pt" type="text" class="inp" placeholder="e.g. Images & Reel"/></div>
+      <div class="g2">
+        <div><label class="lbl">Post Count</label>  <input id="f-pct" type="text"   class="inp" placeholder="e.g. 2+1"/></div>
+        <div><label class="lbl">Post Uploads</label><input id="f-pu"  type="number" class="inp" placeholder="0" min="0"/></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div><label class="lbl">Targets Completed?</label>
+        <select id="f-tgt" class="inp"><option value="Yes">Yes ✅</option><option value="No">No ❌</option></select>
+      </div>
+      <div><label class="lbl">Schedule Date (optional)</label><input id="f-sched" type="date" class="inp"/></div>
+    </div>
+    <div><label class="lbl">Email (optional)</label><input id="f-email" type="email" class="inp" placeholder="your@email.com"/></div>
+    <button id="daily-btn" class="btn btn-gold" onclick="submitDaily()"><i data-lucide="send" style="width:15px;height:15px"></i>Submit Daily Report</button>
+  </div>
+</div>
+
+<!-- ── ADD LEAD ── -->
+<div id="sec-lead" class="sec">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div class="row"><i data-lucide="star" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Add Positive Leads</span></div>
+    <button class="btn btn-ghost btn-sm" onclick="addCl()" style="display:flex;align-items:center;gap:5px"><i data-lucide="plus" style="width:13px;height:13px"></i>Add Client</button>
+  </div>
+  <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:14px">
+    <div class="g2">
+      <div><label class="lbl">Your Full Name</label><input id="l-name"  type="text"  class="inp" placeholder="Your name"/></div>
+      <div><label class="lbl">Email (optional)</label><input id="l-email" type="email" class="inp" placeholder="your@email.com"/></div>
+    </div>
+    <div class="divider"></div>
+    <div id="cl-wrap" style="display:flex;flex-direction:column;gap:12px"></div>
+    <button id="lead-btn" class="btn btn-grn" onclick="submitLeads()"><i data-lucide="star" style="width:15px;height:15px"></i>Submit Leads</button>
+  </div>
+</div>
+
+<!-- ── USERS ── -->
+<div id="sec-users" class="sec">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <div class="row"><i data-lucide="users" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">User Management</span></div>
+    <button class="btn btn-gold btn-sm" onclick="openAddUser()" style="display:flex;align-items:center;gap:5px"><i data-lucide="user-plus" style="width:13px;height:13px"></i>Add</button>
+  </div>
+  <div class="tbl-w card">
+    <table><thead><tr><th>User</th><th>UserID</th><th>Role</th><th>Desig</th><th>Team</th><th>Status</th><th class="c">Actions</th></tr></thead>
+    <tbody id="users-body"></tbody></table>
+  </div>
+</div>
+
+<!-- ── TEAMS ── -->
+<div id="sec-teams" class="sec">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <div class="row"><i data-lucide="layers" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Teams</span></div>
+    <button class="btn btn-gold btn-sm" onclick="openTeam(null)" style="display:flex;align-items:center;gap:5px"><i data-lucide="plus" style="width:13px;height:13px"></i>Create</button>
+  </div>
+  <div id="teams-list" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+<!-- ── AUDIT ── -->
+<div id="sec-audit" class="sec">
+  <div class="row"><i data-lucide="shield-check" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Audit Log (Last 300)</span></div>
+  <div class="tbl-w card">
+    <table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
+    <tbody id="audit-body"></tbody></table>
+  </div>
+</div>
+
+<!-- ── BACKUP ── -->
+<div id="sec-backup" class="sec">
+  <div class="row"><i data-lucide="database-backup" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Backup System</span></div>
+  <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:13px">
+    <div style="font-size:12px;color:#cbd5e1;line-height:1.65">Create a full backup of all Users, Daily, Leads, Settings and Teams stored in your Google Sheet.</div>
+    <button class="btn btn-gold" onclick="createBackup()"><i data-lucide="save" style="width:15px;height:15px"></i>Create Full Backup Now</button>
+  </div>
+  <div class="row" style="margin-top:4px"><i data-lucide="clock" style="width:13px;height:13px;color:var(--muted)"></i><span class="sec-hd">Recent Backups</span></div>
+  <div class="tbl-w card">
+    <table><thead><tr><th>Backup ID</th><th>Timestamp</th><th>Type</th><th class="c">Restore</th></tr></thead>
+    <tbody id="backup-body"></tbody></table>
+  </div>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div id="sec-settings" class="sec">
+  <div class="row"><i data-lucide="settings-2" style="width:14px;height:14px;color:var(--gold)"></i><span class="sec-hd">Settings</span></div>
+  <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#fff">Team Targets</div>
+    <div class="g2">
+      <div><label class="lbl">Call Target / Agent / Day</label><input id="s-ct" type="number" class="inp" min="1"/></div>
+      <div><label class="lbl">Booking Target / Agent / Day</label><input id="s-bt" type="number" class="inp" min="1"/></div>
+    </div>
+    <button class="btn btn-gold" onclick="saveSettings()">Save Targets</button>
+  </div>
+  <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#fff">Message Templates</div>
+    <div style="font-size:10.5px;color:var(--muted)">Placeholders: <code style="background:rgba(255,255,255,.07);padding:2px 5px;border-radius:4px">{name}</code> <code style="background:rgba(255,255,255,.07);padding:2px 5px;border-radius:4px">{phone}</code> <code style="background:rgba(255,255,255,.07);padding:2px 5px;border-radius:4px">{agent}</code></div>
+    <div><label class="lbl">💬 WhatsApp</label><textarea id="s-wa"  class="inp" rows="3" placeholder="Hi {name}…"></textarea></div>
+    <div><label class="lbl">📱 SMS</label>      <textarea id="s-sms" class="inp" rows="2" placeholder="Dear {name}…"></textarea></div>
+    <div><label class="lbl">📧 Email Subject</label><input id="s-esubj" type="text" class="inp" placeholder="Sunrise Realty — Property Update"/></div>
+    <div><label class="lbl">📧 Email Body</label>  <textarea id="s-email" class="inp" rows="4" placeholder="Dear {name},…"></textarea></div>
+    <button class="btn btn-gold" onclick="saveTemplates()">Save Templates</button>
+  </div>
+</div>
+
+</main>
+</div><!-- /app -->
+
+<!-- ══════════ MODALS ══════════ -->
+<!-- Add/Edit User -->
+<div id="m-user" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="m-user-title">
+  <div class="modal"><div class="modal-body">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:900;text-transform:uppercase;color:#fff" id="m-user-title">Add User</span>
+      <button class="icon-btn" onclick="closeM('m-user')" aria-label="Close"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div class="g2">
+      <div><label class="lbl">Username *</label><input id="mu-un" type="text"  class="inp" placeholder="unique"/></div>
+      <div><label class="lbl">Password *</label><input id="mu-pw" type="text"  class="inp" placeholder="password"/></div>
+      <div><label class="lbl">Full Name</label>  <input id="mu-fn" type="text"  class="inp" placeholder="Full name"/></div>
+      <div><label class="lbl">Phone</label>       <input id="mu-ph" type="tel"   class="inp" placeholder="10-digit" maxlength="10"/></div>
+    </div>
+    <div class="g2">
+      <div><label class="lbl">Role</label><select id="mu-role" class="inp"><option value="Agent">Agent</option><option value="Admin">Admin</option></select></div>
+      <div><label class="lbl">Designation</label><select id="mu-desig" class="inp"><option value="">Select…</option><option value="Sales">Sales</option><option value="Telecaller">Telecaller</option><option value="Digital">Digital</option></select></div>
+    </div>
+    <div><label class="lbl">Team</label><select id="mu-team" class="inp"><option value="">No Team</option></select></div>
+    <div><label class="lbl">Email</label><input id="mu-em" type="email" class="inp" placeholder="email@example.com"/></div>
+    <button class="btn btn-gold" id="mu-save" onclick="saveUser()">Save User</button>
+  </div></div>
+</div>
+
+<!-- Team Modal -->
+<div id="m-team" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="m-team-title">
+  <div class="modal"><div class="modal-body">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:900;text-transform:uppercase;color:#fff" id="m-team-title">Create Team</span>
+      <button class="icon-btn" onclick="closeM('m-team')" aria-label="Close"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div><label class="lbl">Team Name *</label><input id="mt-name" type="text" class="inp" placeholder="e.g. Alpha Squad"/></div>
+    <div><label class="lbl">Description</label><input id="mt-desc" type="text" class="inp" placeholder="Optional"/></div>
+    <div><label class="lbl">Select Members</label><div id="mt-members" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;padding:4px"></div></div>
+    <button class="btn btn-gold" onclick="saveTeam()">Save Team</button>
+  </div></div>
+</div>
+
+<!-- Message Modal -->
+<div id="m-msg" class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="m-msg-title">
+  <div class="modal"><div class="modal-body">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:900;text-transform:uppercase;color:#fff" id="m-msg-title">Send Message</span>
+      <button class="icon-btn" onclick="closeM('m-msg')" aria-label="Close"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div id="msg-prev" style="background:rgba(255,255,255,.04);border-radius:12px;padding:13px;font-size:12.5px;color:#cbd5e1;line-height:1.65;border:1px solid var(--border);white-space:pre-wrap;max-height:160px;overflow-y:auto"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <a id="msg-wa"  href="#" target="_blank" class="btn btn-grn"   style="text-decoration:none"><i data-lucide="message-circle" style="width:15px;height:15px"></i>Open WhatsApp</a>
+      <a id="msg-sms" href="#" class="btn btn-ghost" style="text-decoration:none"><i data-lucide="smartphone" style="width:15px;height:15px"></i>Open SMS</a>
+      <a id="msg-em"  href="#" class="btn btn-ghost" style="text-decoration:none"><i data-lucide="mail" style="width:15px;height:15px"></i>Open Email</a>
+    </div>
+  </div></div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="m-fb" class="modal-bg" role="dialog" aria-modal="true">
+  <div class="modal"><div class="modal-body">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:13px;font-weight:900;text-transform:uppercase;color:#fff">Client Feedback</span>
+      <button class="icon-btn" onclick="closeM('m-fb')" aria-label="Close"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div id="fb-client-name" style="font-weight:900;color:#fff;font-size:14px"></div>
+    <div><label class="lbl">Feedback History</label><div id="fb-hist" class="fb-hist"></div></div>
+    <div><label class="lbl">Add New Feedback</label><textarea id="fb-new" class="inp" rows="3" placeholder="Enter updated feedback…"></textarea></div>
+    <input type="hidden" id="fb-row-idx"/>
+    <button class="btn btn-gold" onclick="saveFeedback()">Save Feedback</button>
+  </div></div>
+</div>
+
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ══════════ SCRIPTS (order matters) ══════════ -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/loader.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/render.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
